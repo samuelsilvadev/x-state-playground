@@ -1,17 +1,19 @@
-import { createMachine, assign } from 'xstate';
+import { createMachine, assign } from "xstate";
 
 const ticker = (context, event) => (callback) => {
-  // This is the callback service creator.
-  // Add the implementation details here.
-  // ...
+  const intervalId = setInterval(() => {
+    callback("TICK");
+  }, context.interval * 1000);
+
+  return () => clearInterval(intervalId);
 };
 
 const timerExpired = (ctx) => ctx.elapsed >= ctx.duration;
 
 // https://xstate.js.org/viz/?gist=78fef4bd3ae520709ceaee62c0dd59cd
 export const timerMachine = createMachine({
-  id: 'timer',
-  initial: 'idle',
+  id: "timer",
+  initial: "idle",
   context: {
     duration: 60,
     elapsed: 0,
@@ -24,19 +26,19 @@ export const timerMachine = createMachine({
         elapsed: 0,
       }),
       on: {
-        TOGGLE: 'running',
+        TOGGLE: "running",
         RESET: undefined,
       },
     },
     running: {
-      // Invoke the callback service here.
-      // ...
-
-      initial: 'normal',
+      invoke: {
+        src: ticker,
+      },
+      initial: "normal",
       states: {
         normal: {
           always: {
-            target: 'overtime',
+            target: "overtime",
             cond: timerExpired,
           },
           on: {
@@ -55,7 +57,7 @@ export const timerMachine = createMachine({
             elapsed: (ctx) => ctx.elapsed + ctx.interval,
           }),
         },
-        TOGGLE: 'paused',
+        TOGGLE: "paused",
         ADD_MINUTE: {
           actions: assign({
             duration: (ctx) => ctx.duration + 60,
@@ -64,12 +66,12 @@ export const timerMachine = createMachine({
       },
     },
     paused: {
-      on: { TOGGLE: 'running' },
+      on: { TOGGLE: "running" },
     },
   },
   on: {
     RESET: {
-      target: '.idle',
+      target: ".idle",
     },
   },
 });
